@@ -186,10 +186,7 @@ def reacheable_states(model) -> BDD:
 
 def build_tail(start: BDD, new_list: List[BDD], model: BddFsm) -> List[State | Inputs]:
   
-  """
-  Please God let me finish This Abhorrence of a script
-  So that I may deliver yet another passable assignement in time
-  """
+  
   k = -1
   for i in range(len(new_list)):
       if start <= new_list[i]:
@@ -212,12 +209,14 @@ def build_tail(start: BDD, new_list: List[BDD], model: BddFsm) -> List[State | I
 
 def build_cycle(start: BDD, new_list: List[BDD], model: BddFsm) -> List[State | Inputs]:
   
+  # We find where in the expansion we have the head of the loop
+
   k = 0
   for i in range(len(new_list)):
       if start.entailed(new_list[i]):
           k = i
           break
-  
+
   path = [start]
   curr = start
 
@@ -229,6 +228,9 @@ def build_cycle(start: BDD, new_list: List[BDD], model: BddFsm) -> List[State | 
     curr = p_curr
 
   inputs = model.get_inputs_between_states(start, curr)
+  
+  # We know we have started from the head
+
   return [start, model.pick_one_inputs(inputs)] + path
 
 
@@ -254,6 +256,8 @@ def explain_loop(recur: BDD, reach: BDD, model: BddFsm) -> CycleInfo:
 
   """
   build the loop trace
+  we keep track of the expansion frontier in the list from start
+  by filtering with the states in reach_recur
   """
 
   while True:
@@ -279,10 +283,11 @@ def explain_loop(recur: BDD, reach: BDD, model: BddFsm) -> CycleInfo:
     if start <= R:
       loop = build_cycle(start, new_list, model)
       tail = build_tail(loop[0], tailList, model)
-      return {"Tail": [State.get_str_values(x) for x in tail], "Loop": [State.get_str_values(x) for x in loop]}
+      return {"Tail": [State.get_str_values(x) if not y & 1 else Inputs.get_str_values(x) for x,y in zip(tail, range(len(tail)))],
+       "Loop": [State.get_str_values(x) if not y & 1 else Inputs.get_str_values(x) for x,y in zip(loop, range(len(loop)))]}
 
     else:
-
+      new_list = []
       start = model.pick_one_state(R)      
 
   return ()
@@ -303,7 +308,7 @@ def find_circular_path(region : BDD, always_false: BDD, model : BddFsm) -> Resul
 
     while n.isnot_false():
 
-      pre_reach = pre_reach | n #expand the reach with the new states
+      pre_reach = pre_reach + n #expand the reach with the new states
     
       if recur <= pre_reach: # all the region is reacheable
         
